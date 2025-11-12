@@ -125,7 +125,7 @@ const config = {
             position: 'right',
           },
           {
-            to: '/admin',
+            href: '/admin/index.html',
             label: '⚙️ Decap CMS',
             position: 'right',
           },
