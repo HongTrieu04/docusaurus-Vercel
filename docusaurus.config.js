@@ -1,49 +1,38 @@
 // @ts-check
-// `@type` JSDoc annotations allow editor autocompletion and type checking
-// (when paired with `@ts-check`).
-// There are various equivalent ways to declare your Docusaurus config.
-// See: https://docusaurus.io/docs/api/docusaurus-config
-
+// Import các module cần thiết
 import {themes as prismThemes} from 'prism-react-renderer';
 import path from 'path';
 import fs from 'fs';
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+// --- HÀM TẢI NAVBAR TỪ CMS ---
 
 /**
- * Load navbar items from dynamically created navbar folders
- * Looks for folders at root level with navbar.json metadata files
+ * Tải các mục Navbar từ các file JSON metadata trong data/navbars.
+ * File này chỉ chạy trong môi trường build (Node.js).
  */
 function loadDynamicNavbars() {
-  const projectRoot = process.cwd();
+  // Trỏ đến thư mục chứa các file metadata JSON do API/CMS tạo ra
+  const navbarsDir = path.join(process.cwd(), 'data', 'navbars');
+
+  if (!fs.existsSync(navbarsDir)) {
+    // Nếu thư mục chưa tồn tại (ví dụ: lần build đầu tiên), trả về mảng rỗng
+    return [];
+  }
+
   const navbarItems = [];
   
-  // List of protected folders that shouldn't be treated as navbars
-  const protectedFolders = ['docs', 'blog', 'src', 'static', 'node_modules', 'build', '.git', '.github'];
-  
   try {
-    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    const entries = fs.readdirSync(navbarsDir);
     
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      if (protectedFolders.includes(entry.name)) continue;
-      if (entry.name.startsWith('.')) continue; // Skip hidden folders
-      
-      const navbarMetadataPath = path.join(projectRoot, entry.name, 'navbar.json');
-      
-      // Check if this folder has navbar.json metadata
-      if (fs.existsSync(navbarMetadataPath)) {
+    for (const fileName of entries) {
+      if (fileName.endsWith('.json')) {
+        const filePath = path.join(navbarsDir, fileName);
+        
         try {
-          const metadata = JSON.parse(fs.readFileSync(navbarMetadataPath, 'utf-8'));
-          navbarItems.push({
-            type: metadata.type || 'docSidebar',
-            sidebarId: metadata.sidebarId || entry.name,
-            position: metadata.position || 'left',
-            label: metadata.label,
-            order: metadata.order || 999,
-          });
+          const metadata = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          navbarItems.push(metadata);
         } catch (err) {
-          console.warn(`Failed to parse navbar.json for ${entry.name}:`, err instanceof Error ? err.message : String(err));
+          console.warn(`Failed to parse navbar file ${fileName}:`, err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -51,36 +40,29 @@ function loadDynamicNavbars() {
     console.warn('Failed to load dynamic navbars:', err instanceof Error ? err.message : String(err));
   }
   
+  // Sắp xếp các mục theo trường 'order'
   return navbarItems.sort((a, b) => (a.order || 999) - (b.order || 999));
 }
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
+  // ... (cấu hình cơ bản: title, tagline, favicon, url, baseUrl, v.v.)
   title: 'My Site',
   tagline: 'Dinosaurs are cool',
   favicon: 'img/favicon.ico',
 
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: true,
   },
 
-  // Set the production url of your site here
   url: 'https://your-docusaurus-site.example.com',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'facebook',
+  projectName: 'docusaurus',
 
   onBrokenLinks: 'throw',
 
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -93,10 +75,7 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: 'https://github.com/HongTrieu04/docusaurus-Vercel/tree/main/',
         },
         blog: {
           showReadingTime: true,
@@ -104,11 +83,7 @@ const config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
+          editUrl: 'https://github.com/HongTrieu04/docusaurus-Vercel/tree/main/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
@@ -123,7 +98,6 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
       colorMode: {
         respectPrefersColorScheme: true,
@@ -132,6 +106,7 @@ const config = {
         title: 'My Site',
         logo: { alt: 'My Site Logo', src: 'img/logo.svg' },
         items: [
+          // Các mục Docs/Blog MẶC ĐỊNH
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
@@ -139,16 +114,24 @@ const config = {
             label: 'Tutorial',
           },
           { to: '/blog', label: 'Blog', position: 'left' },
-          // Dynamically loaded navbars from folder metadata
+          
+          // MỤC ĐỘNG TỪ CMS/API
           ...loadDynamicNavbars(),
+          
+          // Các mục Admin (Đã tách biệt)
           {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
+            to: '/navbar-manager', 
+            label: '🛠️ Navbar Manager',
             position: 'right',
           },
           {
             to: '/admin',
-            label: '⚙️ Admin',
+            label: '⚙️ Decap CMS',
+            position: 'right',
+          },
+          {
+            href: 'https://github.com/HongTrieu04/docusaurus-Vercel',
+            label: 'GitHub',
             position: 'right',
           },
         ],
@@ -156,45 +139,7 @@ const config = {
       footer: {
         style: 'dark',
         links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
-          },
-          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'X',
-                href: 'https://x.com/docusaurus',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
-              },
-            ],
-          },
+          // ... (cấu hình footer)
         ],
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
       },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
-import styles from './admin.module.css';
+import styles from './navbar-manager.module.css';
 
 export default function AdminPage() {
   const [navbars, setNavbars] = useState([]);
