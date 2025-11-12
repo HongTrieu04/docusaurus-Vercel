@@ -5,6 +5,45 @@
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
 import {themes as prismThemes} from 'prism-react-renderer';
+import fs from 'fs';
+import path from 'path';
+
+// Load navbar items from _metadata.json files in data/navbars/*/
+// This enables the CMS to manage navbars as folders with pages inside.
+function loadNavbarItems() {
+  try {
+    const dir = path.join(__dirname, 'data', 'navbars');
+    if (!fs.existsSync(dir)) return null;
+
+    const items = [];
+    const subDirs = fs.readdirSync(dir).filter((name) => {
+      const fullPath = path.join(dir, name);
+      return fs.statSync(fullPath).isDirectory();
+    });
+
+    for (const subDir of subDirs) {
+      const metadataPath = path.join(dir, subDir, '_metadata.json');
+      if (fs.existsSync(metadataPath)) {
+        try {
+          const content = fs.readFileSync(metadataPath, 'utf8');
+          const item = JSON.parse(content);
+          items.push(item);
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.warn(`Failed to parse ${metadataPath}:`, errMsg);
+        }
+      }
+    }
+
+    // Sort by order (if present) then by folder name
+    items.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return items;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.warn('Failed to load navbar items:', errMsg);
+    return null;
+  }
+}
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -82,27 +121,37 @@ const config = {
       colorMode: {
         respectPrefersColorScheme: true,
       },
-      navbar: {
-        title: 'My Site',
-        logo: {
-          alt: 'My Site Logo',
-          src: 'img/logo.svg',
-        },
-        items: [
-          {
-            type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
-            position: 'left',
-            label: 'Tutorial',
-          },
-          {to: '/blog', label: 'Blog', position: 'left'},
-          {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
-            position: 'right',
-          },
-        ],
-      },
+      navbar: (function () {
+        const dynamicItems = loadNavbarItems();
+        const fallback = {
+          title: 'My Site',
+          logo: { alt: 'My Site Logo', src: 'img/logo.svg' },
+          items: [
+            {
+              type: 'docSidebar',
+              sidebarId: 'tutorialSidebar',
+              position: 'left',
+              label: 'Tutorial',
+            },
+            { to: '/blog', label: 'Blog', position: 'left' },
+            {
+              href: 'https://github.com/facebook/docusaurus',
+              label: 'GitHub',
+              position: 'right',
+            },
+          ],
+        };
+
+        // If we can load navbar items from data files, use them; otherwise use the default fallback items.
+        if (!dynamicItems || dynamicItems.length === 0) return fallback;
+
+        // Build the final navbar object reusing title/logo from fallback but replacing items
+        return {
+          title: fallback.title,
+          logo: fallback.logo,
+          items: dynamicItems,
+        };
+      })(),
       footer: {
         style: 'dark',
         links: [

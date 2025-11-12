@@ -40,76 +40,55 @@ collections:
       - { name: "sidebar_label", label: "Nhãn Sidebar", widget: "string", optional: true }
       - { name: "sidebar_position", label: "Vị trí Sidebar", widget: "number", value_type: 'int', optional: true }
       - { name: "body", label: "Nội dung", widget: "markdown" }
+      # Choose which navbar this page belongs to (optional).
+      - {
+          name: "navbarId",
+          label: "Navbar",
+          widget: "relation",
+          collection: "navbars",
+          search_fields: ["id", "label"],
+          value_field: "id",
+          display_fields: ["label"],
+          required: false,
+          hint: "Chọn Navbar để gắn trang này vào (tùy chọn)"
+        }
 
-  # --- 3. CÀI ĐẶT TRANG (Sửa Navbar) ---
-  - name: "settings"
-    label: "Cài Đặt Trang"
-    editor:
-      preview: false
-    files:
-      - label: "Thanh Điều Hướng (Navbar)"
-        name: "navbar"
-        file: "data/navbar.json"
-        fields:
-          - label: "Các mục trên Navbar"
-            name: "items"
-            widget: "list"
-            summary: "{{fields.label}}"
-            fields:
-              # === Navbar Item Configuration ===
-              - {
-                  label: "Nhãn (Label)",
-                  name: "label",
-                  widget: "string",
-                  hint: "Tên hiển thị (bắt buộc)",
-                  required: true
-                }
-              - {
-                  label: "Đường dẫn nội bộ (to)",
-                  name: "to",
-                  widget: "string",
-                  required: false,
-                  hint: "Đường dẫn nội bộ (vd: /docs/intro, /blog) - Để trống nếu sử dụng đường dẫn ngoài"
-                }
-              - {
-                  label: "Đường dẫn bên ngoài (href)",
-                  name: "href",
-                  widget: "string",
-                  required: false,
-                  hint: "Đường dẫn đầy đủ (vd: https://google.com) - Để trống nếu sử dụng đường dẫn nội bộ"
-                }
-              - {
-                  label: "Loại mục (type)",
-                  name: "type",
-                  widget: "select",
-                  required: false,
-                  options: [
-                    { label: "Mặc định", value: "" },
-                    { label: "Tài liệu (docSidebar)", value: "docSidebar" },
-                    { label: "Liên kết ngoài", value: "external" }
-                  ],
-                  default: "",
-                  hint: "Chọn loại mục menu. Để trống cho liên kết thông thường"
-                }
-              - {
-                  label: "ID Sidebar",
-                  name: "sidebarId",
-                  widget: "select",
-                  required: false,
-                  options: [
-                    { label: "Tutorial", value: "tutorialSidebar" },
-                    { label: "Docs", value: "docs" },
-                    { label: "Blog", value: "blog" }
-                  ],
-                  hint: "Chỉ cần chọn khi Loại mục là 'docSidebar'",
-                  default: "tutorialSidebar"
-                }
-              - {
-                  label: "Vị trí hiển thị",
-                  name: "position",
-                  widget: "select",
-                  required: false,
-                  options: ["left", "right"],
-                  default: "left",
-                  hint: "Vị trí hiển thị trên thanh điều hướng"
-                }
+  # --- 3. NAVBARS (Quản lý navbar như các folder) ---
+  # Each navbar is a folder under data/navbars/ with a _metadata.json file
+  - name: "navbars"
+    label: "Navbars (Sections)"
+    folder: "data/navbars"
+    create: true
+    extension: "json"
+    identifier_field: "id"
+    path: "{{slug}}/_metadata"
+    slug: "{{slug}}"
+    fields:
+      - { name: "id", label: "ID (unique)", widget: "string", required: true, hint: "e.g., tutorial, guides, api" }
+      - { name: "label", label: "Navbar Label", widget: "string", required: true }
+      - { name: "to", label: "Internal Path (to)", widget: "string", required: false, hint: "e.g., /docs/tutorial" }
+      - { name: "href", label: "External URL (href)", widget: "string", required: false }
+      - { name: "type", label: "Type", widget: "select", options: ["", "docSidebar", "external"], default: "" }
+      - { name: "sidebarId", label: "Sidebar ID", widget: "string", required: false, hint: "Only if type is docSidebar" }
+      - { name: "position", label: "Position", widget: "select", options: ["left", "right"], default: "left" }
+      - { name: "order", label: "Order (for sorting)", widget: "number", default: 0, value_type: "int" }
+
+  # --- 4. NAVBAR PAGES (Pages dentro de cada navbar) ---
+  # Each navbar can have its own pages (markdown files inside its folder)
+  - name: "navbar_pages"
+    label: "Navbar Pages"
+    folder: "data/navbars"
+    create: true
+    extension: "md"
+    format: "frontmatter"
+    nested:
+      depth: 3
+    slug: "{{slug}}"
+    fields:
+      - { name: "title", label: "Page Title", widget: "string", required: true }
+      - { name: "sidebar_label", label: "Sidebar Label", widget: "string", required: false }
+      - { name: "sidebar_position", label: "Sidebar Position", widget: "number", value_type: "int", required: false }
+      - { name: "body", label: "Content", widget: "markdown" }
+    filter:
+      field: "body"
+      pattern: "^(?!.*_metadata)"

@@ -1,0 +1,250 @@
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.error {
+  background-color: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Navbars Section */
+.navbarsSection {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.navbarsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.navbarItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.navbarItem.active {
+  background: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.navbarButton {
+  flex: 1;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #333;
+  font-weight: 500;
+}
+
+.navbarButton:hover {
+  color: #2196f3;
+}
+
+.deleteBtn,
+.editBtn,
+.submitBtn,
+.addBtn,
+.cancelBtn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background: white;
+  color: #333;
+}
+
+.deleteBtn {
+  background: #ffebee;
+  color: #c33;
+  border-color: #fcc;
+  padding: 0.5rem 0.75rem;
+  min-width: 40px;
+}
+
+.deleteBtn:hover {
+  background: #ffcdd2;
+  border-color: #ff9800;
+}
+
+.editBtn {
+  background: #e3f2fd;
+  color: #2196f3;
+  border-color: #bbdefb;
+}
+
+.editBtn:hover {
+  background: #bbdefb;
+  border-color: #2196f3;
+}
+
+.addBtn {
+  background: #e8f5e9;
+  color: #4caf50;
+  border-color: #c8e6c9;
+  width: 100%;
+  padding: 0.75rem;
+  font-weight: 500;
+  margin-top: 1rem;
+}
+
+.addBtn:hover {
+  background: #c8e6c9;
+  border-color: #4caf50;
+}
+
+.submitBtn {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.submitBtn:hover {
+  background: #45a049;
+}
+
+.cancelBtn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.cancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.form button {
+  width: 100%;
+}
+
+.form > button:last-child {
+  width: auto;
+  margin-left: auto;
+}
+
+/* Pages Section */
+.pagesSection {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.pagesList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pageItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.pageItem:hover {
+  border-color: #2196f3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pageInfo {
+  flex: 1;
+}
+
+.pageInfo h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.pageFile {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.pageActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.emptyMsg {
+  color: #999;
+  text-align: center;
+  padding: 2rem;
+}
+
+.info {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f0f7ff;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  color: #333;
+}
+
+.info strong {
+  color: #2196f3;
+}

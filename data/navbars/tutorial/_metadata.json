@@ -1,0 +1,9 @@
+{
+  "id": "tutorial",
+  "label": "Tutorial",
+  "to": "/tutorial",
+  "type": "docSidebar",
+  "sidebarId": "tutorialSidebar",
+  "position": "left",
+  "order": 1
+}
