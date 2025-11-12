@@ -7,32 +7,40 @@ import fs from 'fs';
 // --- HÀM TẢI NAVBAR TỪ CMS ---
 
 /**
- * Tải các mục Navbar từ các file JSON metadata trong data/navbars.
- * File này chỉ chạy trong môi trường build (Node.js).
+ * Load navbar items from dynamically created navbar folders at project root.
+ * Looks for folders with navbar.json metadata files.
+ * This function runs at build time (Node.js environment).
  */
 function loadDynamicNavbars() {
-  // Trỏ đến thư mục chứa các file metadata JSON do API/CMS tạo ra
-  const navbarsDir = path.join(process.cwd(), 'data', 'navbars');
-
-  if (!fs.existsSync(navbarsDir)) {
-    // Nếu thư mục chưa tồn tại (ví dụ: lần build đầu tiên), trả về mảng rỗng
-    return [];
-  }
-
+  const projectRoot = process.cwd();
   const navbarItems = [];
   
+  // Protected folders that shouldn't be treated as navbars
+  const protectedFolders = ['docs', 'blog', 'src', 'static', 'node_modules', 'build', '.git', '.github', 'data', 'api'];
+  
   try {
-    const entries = fs.readdirSync(navbarsDir);
+    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
     
-    for (const fileName of entries) {
-      if (fileName.endsWith('.json')) {
-        const filePath = path.join(navbarsDir, fileName);
-        
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (protectedFolders.includes(entry.name)) continue;
+      if (entry.name.startsWith('.')) continue; // Skip hidden folders
+      
+      const navbarMetadataPath = path.join(projectRoot, entry.name, 'navbar.json');
+      
+      // Check if this folder has navbar.json metadata
+      if (fs.existsSync(navbarMetadataPath)) {
         try {
-          const metadata = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          navbarItems.push(metadata);
+          const metadata = JSON.parse(fs.readFileSync(navbarMetadataPath, 'utf-8'));
+          navbarItems.push({
+            type: metadata.type || 'docSidebar',
+            sidebarId: metadata.sidebarId || entry.name,
+            position: metadata.position || 'left',
+            label: metadata.label,
+            order: metadata.order || 999,
+          });
         } catch (err) {
-          console.warn(`Failed to parse navbar file ${fileName}:`, err instanceof Error ? err.message : String(err));
+          console.warn(`Failed to parse navbar.json for ${entry.name}:`, err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -40,11 +48,9 @@ function loadDynamicNavbars() {
     console.warn('Failed to load dynamic navbars:', err instanceof Error ? err.message : String(err));
   }
   
-  // Sắp xếp các mục theo trường 'order'
   return navbarItems.sort((a, b) => (a.order || 999) - (b.order || 999));
 }
 
-/** @type {import('@docusaurus/types').Config} */
 const config = {
   // ... (cấu hình cơ bản: title, tagline, favicon, url, baseUrl, v.v.)
   title: 'My Site',
@@ -72,7 +78,6 @@ const config = {
   presets: [
     [
       'classic',
-      /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
           sidebarPath: './sidebars.js',
@@ -97,7 +102,6 @@ const config = {
   ],
 
   themeConfig:
-    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       image: 'img/docusaurus-social-card.jpg',
       colorMode: {
@@ -107,7 +111,7 @@ const config = {
         title: 'My Site',
         logo: { alt: 'My Site Logo', src: 'img/logo.svg' },
         items: [
-          // Các mục Docs/Blog MẶC ĐỊNH
+          // Standard Docs/Blog items
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
@@ -116,18 +120,13 @@ const config = {
           },
           { to: '/blog', label: 'Blog', position: 'left' },
           
-          // MỤC ĐỘNG TỪ CMS/API
+          // Dynamically loaded navbars from GitHub API
           ...loadDynamicNavbars(),
           
-          // Các mục Admin (Đã tách biệt)
+          // Admin items
           {
-            to: '/navbar-manager', 
-            label: '🛠️ Navbar Manager',
-            position: 'right',
-          },
-          {
-            href: '/admin/index.html',
-            label: '⚙️ Decap CMS',
+            to: '/admin', 
+            label: '⚙️ Admin',
             position: 'right',
           },
           {
@@ -140,7 +139,41 @@ const config = {
       footer: {
         style: 'dark',
         links: [
-          // ... (cấu hình footer)
+          {
+            title: 'Docs',
+            items: [
+              {
+                label: 'Tutorial',
+                to: '/docs/intro',
+              },
+            ],
+          },
+          {
+            title: 'Community',
+            items: [
+              {
+                label: 'Stack Overflow',
+                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+              },
+              {
+                label: 'Discord',
+                href: 'https://discordapp.com/invite/docusaurus',
+              },
+            ],
+          },
+          {
+            title: 'More',
+            items: [
+              {
+                label: 'Blog',
+                to: '/blog',
+              },
+              {
+                label: 'GitHub',
+                href: 'https://github.com/facebook/docusaurus',
+              },
+            ],
+          },
         ],
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
       },
