@@ -7,6 +7,7 @@ export default function AdminPage() {
   const [navbars, setNavbars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     id: '',
@@ -17,32 +18,35 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    loadConfig();
+    loadNavbars();
   }, []);
 
-  const loadConfig = async () => {
+  const loadNavbars = async () => {
     try {
       setLoading(true);
-      // Load from navbars.config.json
-      const response = await fetch('/navbars.config.json');
+      setError(null);
+      const response = await fetch('/api/navbars');
       if (response.ok) {
         const data = await response.json();
-        setNavbars(data.navbars || []);
-      } else {
-        setNavbars([]);
+        setNavbars(data);
       }
     } catch (err) {
-      console.log('No existing config, starting fresh');
-      setNavbars([]);
+      setError('Failed to load navbars: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddNavbar = (e) => {
+  const handleAddNavbar = async (e) => {
     e.preventDefault();
     if (!formData.id.trim() || !formData.label.trim()) {
       setError('ID and Label are required');
+      return;
+    }
+
+    // Check if ID is valid (alphanumeric and hyphens only)
+    if (!/^[a-z0-9-]+$/.test(formData.id)) {
+      setError('ID must be lowercase, alphanumeric, and hyphens only (e.g., "my-guides")');
       return;
     }
 
@@ -51,25 +55,45 @@ export default function AdminPage() {
       return;
     }
 
-    if (editingId) {
-      // Update existing
-      setNavbars(navbars.map(n => 
-        n.id === editingId ? { ...formData } : n
-      ));
-      setEditingId(null);
-    } else {
-      // Add new
-      setNavbars([...navbars, { ...formData }]);
-    }
+    try {
+      setLoading(true);
+      setError(null);
 
-    setFormData({
-      id: '',
-      label: '',
-      position: 'left',
-      type: 'docSidebar',
-      order: 0,
-    });
-    setError(null);
+      const response = await fetch('/api/navbars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: formData.id,
+          label: formData.label,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to create navbar');
+      }
+
+      const result = await response.json();
+      setSuccess(`✅ Navbar "${formData.label}" created! Folder: /${formData.id}/`);
+      setFormData({
+        id: '',
+        label: '',
+        position: 'left',
+        type: 'docSidebar',
+        order: 0,
+      });
+      setEditingId(null);
+      
+      // Reload navbar list
+      await loadNavbars();
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create navbar');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (navbar) => {
@@ -77,10 +101,30 @@ export default function AdminPage() {
     setEditingId(navbar.id);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure? This will remove the navbar from the navigation.')) {
-      setNavbars(navbars.filter(n => n.id !== id));
+  const handleDelete = async (id) => {
+    if (!window.confirm(`Are you sure? This will delete the /${id}/ folder and all its content.`)) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const response = await fetch('/api/navbars', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to delete navbar');
+      }
+
+      setSuccess(`✅ Navbar "${id}" deleted!`);
       setEditingId(null);
+      await loadNavbars();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete navbar');
     }
   };
 
@@ -96,22 +140,11 @@ export default function AdminPage() {
     setError(null);
   };
 
-  const handleSaveConfig = async () => {
-    try {
-      const configContent = `export const navbarsConfig = ${JSON.stringify({ navbars }, null, 2)};`;
-      
-      // Show instructions instead of actually saving
-      alert(`Configuration ready to save:\n\n${configContent}\n\nCopy this to a new file or update your docusaurus.config.js navbar.items array`);
-    } catch (err) {
-      setError('Failed to save configuration');
-    }
-  };
-
-  if (loading) {
+  if (loading && navbars.length === 0) {
     return (
       <Layout title="Admin - Configure Navbars">
         <div className={styles.container}>
-          <p>Loading configuration...</p>
+          <p>Loading navbars...</p>
         </div>
       </Layout>
     );
@@ -120,39 +153,49 @@ export default function AdminPage() {
   return (
     <Layout title="Admin - Configure Navbars">
       <div className={styles.container}>
-        <Heading as="h1">📊 Navbar Configuration Admin</Heading>
+        <Heading as="h1">📊 Navbar Management</Heading>
         
-        <div className={styles.adminContent}>
-          {error && <div className={styles.error}>{error}</div>}
+        {error && (
+          <div className={styles.error}>
+            ⚠️ {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className={styles.success}>
+            {success}
+          </div>
+        )}
 
+        <div className={styles.adminContent}>
           {/* Form Section */}
           <div className={styles.formSection}>
             <Heading as="h2">
-              {editingId ? `Edit Navbar: ${editingId}` : 'Add New Navbar Item'}
+              {editingId ? `Edit Navbar: ${editingId}` : 'Create New Navbar'}
             </Heading>
 
             <form onSubmit={handleAddNavbar} className={styles.adminForm}>
               <div className={styles.formGroup}>
-                <label htmlFor="id">Folder ID (e.g., guides, api, tutorial)</label>
+                <label htmlFor="id">Folder ID *</label>
                 <input
                   id="id"
                   type="text"
-                  placeholder="guides"
+                  placeholder="e.g., guides"
                   value={formData.id}
-                  onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase() })}
                   disabled={editingId !== null}
                   className={styles.formInput}
                   required
                 />
-                <small>Folder name in your project root (e.g., /guides/, /api/)</small>
+                <small>Folder name in your project (lowercase, hyphens ok)</small>
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="label">Display Label</label>
+                <label htmlFor="label">Display Label *</label>
                 <input
                   id="label"
                   type="text"
-                  placeholder="Guides"
+                  placeholder="e.g., Guides"
                   value={formData.label}
                   onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                   className={styles.formInput}
@@ -203,12 +246,12 @@ export default function AdminPage() {
               </div>
 
               <div className={styles.formActions}>
-                <button type="submit" className={styles.submitBtn}>
-                  {editingId ? 'Update' : 'Add'} Navbar
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                  {loading ? 'Processing...' : editingId ? 'Update' : 'Create'} Navbar
                 </button>
                 {editingId && (
                   <button type="button" className={styles.cancelBtn} onClick={handleCancel}>
-                    Cancel Edit
+                    Cancel
                   </button>
                 )}
               </div>
@@ -217,40 +260,43 @@ export default function AdminPage() {
 
           {/* List Section */}
           <div className={styles.listSection}>
-            <Heading as="h2">Configured Navbars ({navbars.length})</Heading>
+            <Heading as="h2">Your Navbars ({navbars.length})</Heading>
 
             {navbars.length === 0 ? (
-              <p className={styles.emptyMsg}>No navbars configured yet. Add one using the form above.</p>
+              <p className={styles.emptyMsg}>No navbars yet. Create your first one!</p>
             ) : (
               <div className={styles.navbarsList}>
                 {navbars
-                  .sort((a, b) => a.order - b.order)
+                  .sort((a, b) => (a.order || 0) - (b.order || 0))
                   .map((navbar) => (
                     <div key={navbar.id} className={styles.navbarCard}>
                       <div className={styles.navbarCardHeader}>
                         <div>
                           <h3>{navbar.label}</h3>
-                          <p className={styles.navbarId}>ID: <code>{navbar.id}</code></p>
+                          <p className={styles.navbarId}>
+                            📁 <code>/{navbar.id}/</code>
+                          </p>
                         </div>
                         <div className={styles.badges}>
                           <span className={styles.badge}>{navbar.type}</span>
                           <span className={styles.badge}>{navbar.position}</span>
-                          <span className={styles.badge}>Order: {navbar.order}</span>
                         </div>
                       </div>
                       <div className={styles.navbarCardActions}>
-                        <button
-                          className={styles.editBtn}
-                          onClick={() => handleEdit(navbar)}
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          className={styles.deleteBtn}
-                          onClick={() => handleDelete(navbar.id)}
-                        >
-                          🗑️ Delete
-                        </button>
+                        {!['docs', 'blog'].includes(navbar.id) && (
+                          <>
+                            <button
+                              className={styles.deleteBtn}
+                              onClick={() => handleDelete(navbar.id)}
+                              disabled={loading}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </>
+                        )}
+                        {['docs', 'blog'].includes(navbar.id) && (
+                          <span className={styles.lockedBadge}>🔒 Built-in</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -260,35 +306,46 @@ export default function AdminPage() {
 
           {/* Info Section */}
           <div className={styles.infoSection}>
-            <Heading as="h3">ℹ️ How This Works</Heading>
+            <Heading as="h3">ℹ️ How It Works</Heading>
             <div className={styles.info}>
               <ol>
                 <li>
-                  <strong>Create a folder</strong> in your project root like: <code>/guides/</code>, <code>/api/</code>, etc.
+                  <strong>Fill the form</strong> with Folder ID (lowercase) and Display Label
                 </li>
                 <li>
-                  <strong>Add markdown files</strong> inside that folder (like you do in <code>/docs/</code>)
+                  <strong>Click "Create Navbar"</strong> to automatically create the folder
                 </li>
                 <li>
-                  <strong>Configure here</strong> to make it appear as a navbar item
+                  <strong>GitHub updates</strong> with the new folder (auto-commit by Vercel)
                 </li>
                 <li>
-                  <strong>Update docusaurus.config.js</strong> with the configuration (copy the config below)
+                  <strong>Vercel rebuilds</strong> and your navbar item appears on the site ✅
+                </li>
+                <li>
+                  <strong>Add content</strong> using Decap CMS editor at <code>/admin</code>
                 </li>
               </ol>
 
-              <div className={styles.configPreview}>
-                <strong>Current Configuration (copy to navbar items in docusaurus.config.js):</strong>
-                <pre><code>{JSON.stringify(navbars, null, 2)}</code></pre>
+              <div className={styles.stepByStep}>
+                <strong>Example:</strong>
+                <ul>
+                  <li>ID: <code>guides</code></li>
+                  <li>Label: <code>Guides</code></li>
+                  <li>Click "Create Navbar"</li>
+                  <li>✅ New <code>/guides/</code> folder created</li>
+                  <li>✅ <code>guides/intro.md</code> created automatically</li>
+                  <li>✅ Navbar item "Guides" appears on site</li>
+                  <li>✅ Edit pages via Decap CMS</li>
+                </ul>
               </div>
 
               <p className={styles.tip}>
-                💡 <strong>Note:</strong> You need to manually:
+                💡 <strong>No Manual Steps!</strong> Everything happens automatically:
                 <ul>
-                  <li>Create folder: <code>mkdir -p /your-folder-name</code></li>
-                  <li>Add pages: create <code>.md</code> files in that folder</li>
-                  <li>Create sidebar config: add to <code>sidebars.js</code></li>
-                  <li>Update docusaurus.config.js: paste the configuration above into navbar items</li>
+                  <li>✅ Folder created on your server</li>
+                  <li>✅ GitHub updated via Vercel</li>
+                  <li>✅ Navbar config auto-updated</li>
+                  <li>✅ Site rebuilds and deploys</li>
                 </ul>
               </p>
             </div>

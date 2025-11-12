@@ -5,8 +5,54 @@
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
 import {themes as prismThemes} from 'prism-react-renderer';
+import path from 'path';
+import fs from 'fs';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
+/**
+ * Load navbar items from dynamically created navbar folders
+ * Looks for folders at root level with navbar.json metadata files
+ */
+function loadDynamicNavbars() {
+  const projectRoot = process.cwd();
+  const navbarItems = [];
+  
+  // List of protected folders that shouldn't be treated as navbars
+  const protectedFolders = ['docs', 'blog', 'src', 'static', 'node_modules', 'build', '.git', '.github'];
+  
+  try {
+    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (protectedFolders.includes(entry.name)) continue;
+      if (entry.name.startsWith('.')) continue; // Skip hidden folders
+      
+      const navbarMetadataPath = path.join(projectRoot, entry.name, 'navbar.json');
+      
+      // Check if this folder has navbar.json metadata
+      if (fs.existsSync(navbarMetadataPath)) {
+        try {
+          const metadata = JSON.parse(fs.readFileSync(navbarMetadataPath, 'utf-8'));
+          navbarItems.push({
+            type: metadata.type || 'docSidebar',
+            sidebarId: metadata.sidebarId || entry.name,
+            position: metadata.position || 'left',
+            label: metadata.label,
+            order: metadata.order || 999,
+          });
+        } catch (err) {
+          console.warn(`Failed to parse navbar.json for ${entry.name}:`, err instanceof Error ? err.message : String(err));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load dynamic navbars:', err instanceof Error ? err.message : String(err));
+  }
+  
+  return navbarItems.sort((a, b) => (a.order || 999) - (b.order || 999));
+}
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -93,6 +139,8 @@ const config = {
             label: 'Tutorial',
           },
           { to: '/blog', label: 'Blog', position: 'left' },
+          // Dynamically loaded navbars from folder metadata
+          ...loadDynamicNavbars(),
           {
             href: 'https://github.com/facebook/docusaurus',
             label: 'GitHub',
