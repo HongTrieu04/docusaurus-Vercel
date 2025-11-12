@@ -5,283 +5,295 @@ import styles from './admin.module.css';
 
 export default function AdminPage() {
   const [navbars, setNavbars] = useState([]);
-  const [selectedNavbar, setSelectedNavbar] = useState(null);
-  const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newNavbarName, setNewNavbarName] = useState('');
-  const [newPageName, setNewPageName] = useState('');
-  const [showNavbarForm, setShowNavbarForm] = useState(false);
-  const [showPageForm, setShowPageForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    id: '',
+    label: '',
+    position: 'left',
+    type: 'docSidebar',
+    order: 0,
+  });
 
-  // Fetch navbars list
   useEffect(() => {
-    fetchNavbars();
+    loadConfig();
   }, []);
 
-  const fetchNavbars = async () => {
+  const loadConfig = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await fetch('/api/navbars');
-      if (!response.ok) throw new Error('Failed to fetch navbars');
-      const data = await response.json();
-      setNavbars(data);
-      if (data.length > 0) {
-        setSelectedNavbar(data[0].id);
-        fetchPages(data[0].id);
+      // Load from navbars.config.json
+      const response = await fetch('/navbars.config.json');
+      if (response.ok) {
+        const data = await response.json();
+        setNavbars(data.navbars || []);
+      } else {
+        setNavbars([]);
       }
     } catch (err) {
-      setError(err.message);
+      console.log('No existing config, starting fresh');
+      setNavbars([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPages = async (navbarId) => {
-    try {
-      const response = await fetch(`/api/navbars/${navbarId}/pages`);
-      if (!response.ok) throw new Error('Failed to fetch pages');
-      const data = await response.json();
-      setPages(data);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleSelectNavbar = (navbarId) => {
-    setSelectedNavbar(navbarId);
-    fetchPages(navbarId);
-  };
-
-  const handleAddNavbar = async (e) => {
+  const handleAddNavbar = (e) => {
     e.preventDefault();
-    if (!newNavbarName.trim()) return;
+    if (!formData.id.trim() || !formData.label.trim()) {
+      setError('ID and Label are required');
+      return;
+    }
 
-    try {
-      const response = await fetch('/api/navbars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newNavbarName }),
-      });
-      if (!response.ok) throw new Error('Failed to create navbar');
-      
-      setNewNavbarName('');
-      setShowNavbarForm(false);
-      await fetchNavbars();
-    } catch (err) {
-      setError(err.message);
+    if (navbars.some(n => n.id === formData.id) && !editingId) {
+      setError('This navbar ID already exists');
+      return;
+    }
+
+    if (editingId) {
+      // Update existing
+      setNavbars(navbars.map(n => 
+        n.id === editingId ? { ...formData } : n
+      ));
+      setEditingId(null);
+    } else {
+      // Add new
+      setNavbars([...navbars, { ...formData }]);
+    }
+
+    setFormData({
+      id: '',
+      label: '',
+      position: 'left',
+      type: 'docSidebar',
+      order: 0,
+    });
+    setError(null);
+  };
+
+  const handleEdit = (navbar) => {
+    setFormData(navbar);
+    setEditingId(navbar.id);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure? This will remove the navbar from the navigation.')) {
+      setNavbars(navbars.filter(n => n.id !== id));
+      setEditingId(null);
     }
   };
 
-  const handleDeleteNavbar = async (navbarId) => {
-    if (!window.confirm('Are you sure you want to delete this navbar?')) return;
-
-    try {
-      const response = await fetch(`/api/navbars/${navbarId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete navbar');
-      
-      await fetchNavbars();
-      setSelectedNavbar(null);
-      setPages([]);
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleCancel = () => {
+    setFormData({
+      id: '',
+      label: '',
+      position: 'left',
+      type: 'docSidebar',
+      order: 0,
+    });
+    setEditingId(null);
+    setError(null);
   };
 
-  const handleAddPage = async (e) => {
-    e.preventDefault();
-    if (!newPageName.trim() || !selectedNavbar) return;
-
+  const handleSaveConfig = async () => {
     try {
-      const response = await fetch(`/api/navbars/${selectedNavbar}/pages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newPageName }),
-      });
-      if (!response.ok) throw new Error('Failed to create page');
+      const configContent = `export const navbarsConfig = ${JSON.stringify({ navbars }, null, 2)};`;
       
-      setNewPageName('');
-      setShowPageForm(false);
-      await fetchPages(selectedNavbar);
+      // Show instructions instead of actually saving
+      alert(`Configuration ready to save:\n\n${configContent}\n\nCopy this to a new file or update your docusaurus.config.js navbar.items array`);
     } catch (err) {
-      setError(err.message);
+      setError('Failed to save configuration');
     }
-  };
-
-  const handleDeletePage = async (pageId) => {
-    if (!window.confirm('Are you sure you want to delete this page?')) return;
-
-    try {
-      const response = await fetch(`/api/navbars/${selectedNavbar}/pages/${pageId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete page');
-      
-      await fetchPages(selectedNavbar);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleEditPage = (pageId) => {
-    // Redirect to Decap CMS editor or your custom editor
-    window.location.href = `/admin#/edit/${selectedNavbar}/${pageId}`;
   };
 
   if (loading) {
     return (
-      <Layout title="Admin - Manage Navbars and Pages">
+      <Layout title="Admin - Configure Navbars">
         <div className={styles.container}>
-          <p>Loading...</p>
+          <p>Loading configuration...</p>
         </div>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Admin - Manage Navbars and Pages">
+    <Layout title="Admin - Configure Navbars">
       <div className={styles.container}>
-        <Heading as="h1">Admin Dashboard</Heading>
+        <Heading as="h1">📊 Navbar Configuration Admin</Heading>
         
-        {error && <div className={styles.error}>{error}</div>}
+        <div className={styles.adminContent}>
+          {error && <div className={styles.error}>{error}</div>}
 
-        <div className={styles.content}>
-          {/* Navbars Section */}
-          <div className={styles.navbarsSection}>
-            <Heading as="h2">Navbars</Heading>
-            
-            <div className={styles.navbarsList}>
-              {navbars.map((navbar) => (
-                <div
-                  key={navbar.id}
-                  className={`${styles.navbarItem} ${
-                    selectedNavbar === navbar.id ? styles.active : ''
-                  }`}
-                >
-                  <button
-                    className={styles.navbarButton}
-                    onClick={() => handleSelectNavbar(navbar.id)}
-                  >
-                    {navbar.label}
-                  </button>
-                  <button
-                    className={styles.deleteBtn}
-                    onClick={() => handleDeleteNavbar(navbar.id)}
-                    title="Delete navbar"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
+          {/* Form Section */}
+          <div className={styles.formSection}>
+            <Heading as="h2">
+              {editingId ? `Edit Navbar: ${editingId}` : 'Add New Navbar Item'}
+            </Heading>
 
-            {showNavbarForm ? (
-              <form onSubmit={handleAddNavbar} className={styles.form}>
+            <form onSubmit={handleAddNavbar} className={styles.adminForm}>
+              <div className={styles.formGroup}>
+                <label htmlFor="id">Folder ID (e.g., guides, api, tutorial)</label>
                 <input
+                  id="id"
                   type="text"
-                  placeholder="Navbar name (e.g., tutorial)"
-                  value={newNavbarName}
-                  onChange={(e) => setNewNavbarName(e.target.value)}
-                  className={styles.input}
-                  autoFocus
+                  placeholder="guides"
+                  value={formData.id}
+                  onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                  disabled={editingId !== null}
+                  className={styles.formInput}
+                  required
                 />
+                <small>Folder name in your project root (e.g., /guides/, /api/)</small>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="label">Display Label</label>
+                <input
+                  id="label"
+                  type="text"
+                  placeholder="Guides"
+                  value={formData.label}
+                  onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                  className={styles.formInput}
+                  required
+                />
+                <small>How this appears in the navbar</small>
+              </div>
+
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="type">Type</label>
+                  <select
+                    id="type"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className={styles.formInput}
+                  >
+                    <option value="docSidebar">Documentation (docSidebar)</option>
+                    <option value="doc">Single Doc</option>
+                    <option value="link">External Link</option>
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="position">Position</label>
+                  <select
+                    id="position"
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    className={styles.formInput}
+                  >
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="order">Order</label>
+                  <input
+                    id="order"
+                    type="number"
+                    value={formData.order}
+                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                    className={styles.formInput}
+                  />
+                  <small>Lower = appears first</small>
+                </div>
+              </div>
+
+              <div className={styles.formActions}>
                 <button type="submit" className={styles.submitBtn}>
-                  Create
+                  {editingId ? 'Update' : 'Add'} Navbar
                 </button>
-                <button
-                  type="button"
-                  className={styles.cancelBtn}
-                  onClick={() => setShowNavbarForm(false)}
-                >
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <button
-                className={styles.addBtn}
-                onClick={() => setShowNavbarForm(true)}
-              >
-                + Add Navbar
-              </button>
-            )}
+                {editingId && (
+                  <button type="button" className={styles.cancelBtn} onClick={handleCancel}>
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+            </form>
           </div>
 
-          {/* Pages Section */}
-          {selectedNavbar && (
-            <div className={styles.pagesSection}>
-              <Heading as="h2">
-                Pages in {navbars.find((n) => n.id === selectedNavbar)?.label}
-              </Heading>
+          {/* List Section */}
+          <div className={styles.listSection}>
+            <Heading as="h2">Configured Navbars ({navbars.length})</Heading>
 
-              <div className={styles.pagesList}>
-                {pages.length === 0 ? (
-                  <p className={styles.emptyMsg}>No pages yet</p>
-                ) : (
-                  pages.map((page) => (
-                    <div key={page.id} className={styles.pageItem}>
-                      <div className={styles.pageInfo}>
-                        <h3>{page.title}</h3>
-                        <p className={styles.pageFile}>{page.file}</p>
+            {navbars.length === 0 ? (
+              <p className={styles.emptyMsg}>No navbars configured yet. Add one using the form above.</p>
+            ) : (
+              <div className={styles.navbarsList}>
+                {navbars
+                  .sort((a, b) => a.order - b.order)
+                  .map((navbar) => (
+                    <div key={navbar.id} className={styles.navbarCard}>
+                      <div className={styles.navbarCardHeader}>
+                        <div>
+                          <h3>{navbar.label}</h3>
+                          <p className={styles.navbarId}>ID: <code>{navbar.id}</code></p>
+                        </div>
+                        <div className={styles.badges}>
+                          <span className={styles.badge}>{navbar.type}</span>
+                          <span className={styles.badge}>{navbar.position}</span>
+                          <span className={styles.badge}>Order: {navbar.order}</span>
+                        </div>
                       </div>
-                      <div className={styles.pageActions}>
+                      <div className={styles.navbarCardActions}>
                         <button
                           className={styles.editBtn}
-                          onClick={() => handleEditPage(page.id)}
+                          onClick={() => handleEdit(navbar)}
                         >
-                          Edit
+                          ✏️ Edit
                         </button>
                         <button
                           className={styles.deleteBtn}
-                          onClick={() => handleDeletePage(page.id)}
+                          onClick={() => handleDelete(navbar.id)}
                         >
-                          Delete
+                          🗑️ Delete
                         </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info Section */}
+          <div className={styles.infoSection}>
+            <Heading as="h3">ℹ️ How This Works</Heading>
+            <div className={styles.info}>
+              <ol>
+                <li>
+                  <strong>Create a folder</strong> in your project root like: <code>/guides/</code>, <code>/api/</code>, etc.
+                </li>
+                <li>
+                  <strong>Add markdown files</strong> inside that folder (like you do in <code>/docs/</code>)
+                </li>
+                <li>
+                  <strong>Configure here</strong> to make it appear as a navbar item
+                </li>
+                <li>
+                  <strong>Update docusaurus.config.js</strong> with the configuration (copy the config below)
+                </li>
+              </ol>
+
+              <div className={styles.configPreview}>
+                <strong>Current Configuration (copy to navbar items in docusaurus.config.js):</strong>
+                <pre><code>{JSON.stringify(navbars, null, 2)}</code></pre>
               </div>
 
-              {showPageForm ? (
-                <form onSubmit={handleAddPage} className={styles.form}>
-                  <input
-                    type="text"
-                    placeholder="Page title"
-                    value={newPageName}
-                    onChange={(e) => setNewPageName(e.target.value)}
-                    className={styles.input}
-                    autoFocus
-                  />
-                  <button type="submit" className={styles.submitBtn}>
-                    Create Page
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cancelBtn}
-                    onClick={() => setShowPageForm(false)}
-                  >
-                    Cancel
-                  </button>
-                </form>
-              ) : (
-                <button
-                  className={styles.addBtn}
-                  onClick={() => setShowPageForm(true)}
-                >
-                  + Add Page
-                </button>
-              )}
+              <p className={styles.tip}>
+                💡 <strong>Note:</strong> You need to manually:
+                <ul>
+                  <li>Create folder: <code>mkdir -p /your-folder-name</code></li>
+                  <li>Add pages: create <code>.md</code> files in that folder</li>
+                  <li>Create sidebar config: add to <code>sidebars.js</code></li>
+                  <li>Update docusaurus.config.js: paste the configuration above into navbar items</li>
+                </ul>
+              </p>
             </div>
-          )}
+          </div>
         </div>
-
-        <p className={styles.info}>
-          💡 Use the <strong>Decap CMS Editor</strong> (at /admin) for full markdown editing.
-          This dashboard is for quick management of navbars and pages.
-        </p>
       </div>
     </Layout>
   );

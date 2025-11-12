@@ -1,6 +1,14 @@
-# Admin Dashboard - Navbar & Pages Management
+# Admin Dashboard - Navbar Configuration Guide
 
-This document explains how the new dynamic admin system works for managing navbars and pages in your Docusaurus project.
+## Overview
+
+The admin page (`/admin-dashboard`) is a **separate configuration page** that helps you manage which folders appear as navbar items in your Docusaurus site.
+
+It's like how you currently have:
+- `/docs` folder → appears as "Tutorial" in navbar
+- `/blog` folder → appears as "Blog" in navbar
+
+The admin page lets you **plan and configure custom navbar items** similar to docs and blog.
 
 ## Overview
 

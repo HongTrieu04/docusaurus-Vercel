@@ -1,9 +1,9 @@
 backend:
   name: github
   branch: main
-  repo: "HongTrieu04/docusaurus-Vercel" # THAY THẾ BẰNG REPO MỚI CỦA BẠN
+  repo: "HongTrieu04/docusaurus-Vercel"
   auth_type: implicit
-  app_id: Ov23liPzYhQvA4nwj7xk # CLIENT ID
+  app_id: Ov23liPzYhQvA4nwj7xk
 
 media_folder: "static/img/uploads"
 public_folder: "/img/uploads"
@@ -23,7 +23,7 @@ collections:
       - { name: "slug", label: "Slug (Đường dẫn)", widget: "string", optional: true }
       - { name: "body", label: "Nội dung", widget: "markdown" }
 
-  # --- 2. DOCS (Tự động quét nội dung bên trong) ---
+  # --- 2. DOCS ---
   - name: "docs"
     label: "Tài Liệu (Docs)"
     folder: "docs"
@@ -31,8 +31,6 @@ collections:
     extension: "md"
     format: "frontmatter"
     slug: "{{slug}}"
-    # 'nested' BẬT tính năng "tự động quét thư mục con"
-    # Đây là cách CMS quét NỘI DUNG, không phải quét COLLECTIONS
     nested:
       depth: 5 
     fields:
@@ -40,55 +38,3 @@ collections:
       - { name: "sidebar_label", label: "Nhãn Sidebar", widget: "string", optional: true }
       - { name: "sidebar_position", label: "Vị trí Sidebar", widget: "number", value_type: 'int', optional: true }
       - { name: "body", label: "Nội dung", widget: "markdown" }
-      # Choose which navbar this page belongs to (optional).
-      - {
-          name: "navbarId",
-          label: "Navbar",
-          widget: "relation",
-          collection: "navbars",
-          search_fields: ["id", "label"],
-          value_field: "id",
-          display_fields: ["label"],
-          required: false,
-          hint: "Chọn Navbar để gắn trang này vào (tùy chọn)"
-        }
-
-  # --- 3. NAVBARS (Quản lý navbar như các folder) ---
-  # Each navbar is a folder under data/navbars/ with a _metadata.json file
-  - name: "navbars"
-    label: "Navbars (Sections)"
-    folder: "data/navbars"
-    create: true
-    extension: "json"
-    identifier_field: "id"
-    path: "{{slug}}/_metadata"
-    slug: "{{slug}}"
-    fields:
-      - { name: "id", label: "ID (unique)", widget: "string", required: true, hint: "e.g., tutorial, guides, api" }
-      - { name: "label", label: "Navbar Label", widget: "string", required: true }
-      - { name: "to", label: "Internal Path (to)", widget: "string", required: false, hint: "e.g., /docs/tutorial" }
-      - { name: "href", label: "External URL (href)", widget: "string", required: false }
-      - { name: "type", label: "Type", widget: "select", options: ["", "docSidebar", "external"], default: "" }
-      - { name: "sidebarId", label: "Sidebar ID", widget: "string", required: false, hint: "Only if type is docSidebar" }
-      - { name: "position", label: "Position", widget: "select", options: ["left", "right"], default: "left" }
-      - { name: "order", label: "Order (for sorting)", widget: "number", default: 0, value_type: "int" }
-
-  # --- 4. NAVBAR PAGES (Pages dentro de cada navbar) ---
-  # Each navbar can have its own pages (markdown files inside its folder)
-  - name: "navbar_pages"
-    label: "Navbar Pages"
-    folder: "data/navbars"
-    create: true
-    extension: "md"
-    format: "frontmatter"
-    nested:
-      depth: 3
-    slug: "{{slug}}"
-    fields:
-      - { name: "title", label: "Page Title", widget: "string", required: true }
-      - { name: "sidebar_label", label: "Sidebar Label", widget: "string", required: false }
-      - { name: "sidebar_position", label: "Sidebar Position", widget: "number", value_type: "int", required: false }
-      - { name: "body", label: "Content", widget: "markdown" }
-    filter:
-      field: "body"
-      pattern: "^(?!.*_metadata)"
