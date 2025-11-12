@@ -7,40 +7,32 @@ import fs from 'fs';
 // --- HÀM TẢI NAVBAR TỪ CMS ---
 
 /**
- * Load navbar items from dynamically created navbar folders at project root.
- * Looks for folders with navbar.json metadata files.
- * This function runs at build time (Node.js environment).
+ * Tải các mục Navbar từ các file JSON metadata trong data/navbars.
+ * File này chỉ chạy trong môi trường build (Node.js).
  */
 function loadDynamicNavbars() {
-  const projectRoot = process.cwd();
+  // Trỏ đến thư mục chứa các file metadata JSON do API/CMS tạo ra
+  const navbarsDir = path.join(process.cwd(), 'data', 'navbars');
+
+  if (!fs.existsSync(navbarsDir)) {
+    // Nếu thư mục chưa tồn tại (ví dụ: lần build đầu tiên), trả về mảng rỗng
+    return [];
+  }
+
   const navbarItems = [];
   
-  // Protected folders that shouldn't be treated as navbars
-  const protectedFolders = ['docs', 'blog', 'src', 'static', 'node_modules', 'build', '.git', '.github', 'data', 'api'];
-  
   try {
-    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    const entries = fs.readdirSync(navbarsDir);
     
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      if (protectedFolders.includes(entry.name)) continue;
-      if (entry.name.startsWith('.')) continue; // Skip hidden folders
-      
-      const navbarMetadataPath = path.join(projectRoot, entry.name, 'navbar.json');
-      
-      // Check if this folder has navbar.json metadata
-      if (fs.existsSync(navbarMetadataPath)) {
+    for (const fileName of entries) {
+      if (fileName.endsWith('.json')) {
+        const filePath = path.join(navbarsDir, fileName);
+        
         try {
-          const metadata = JSON.parse(fs.readFileSync(navbarMetadataPath, 'utf-8'));
-          navbarItems.push({
-            type: metadata.type || 'docSidebar',
-            sidebarId: metadata.sidebarId || entry.name,
-            position: metadata.position || 'left',
-            label: metadata.label,
-            order: metadata.order || 999,
-          });
+          const metadata = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          navbarItems.push(metadata);
         } catch (err) {
-          console.warn(`Failed to parse navbar.json for ${entry.name}:`, err instanceof Error ? err.message : String(err));
+          console.warn(`Failed to parse navbar file ${fileName}:`, err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -48,6 +40,7 @@ function loadDynamicNavbars() {
     console.warn('Failed to load dynamic navbars:', err instanceof Error ? err.message : String(err));
   }
   
+  // Sắp xếp các mục theo trường 'order'
   return navbarItems.sort((a, b) => (a.order || 999) - (b.order || 999));
 }
 
@@ -111,7 +104,7 @@ const config = {
         title: 'My Site',
         logo: { alt: 'My Site Logo', src: 'img/logo.svg' },
         items: [
-          // Standard Docs/Blog items
+          // Các mục Docs/Blog MẶC ĐỊNH
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
@@ -120,13 +113,18 @@ const config = {
           },
           { to: '/blog', label: 'Blog', position: 'left' },
           
-          // Dynamically loaded navbars from GitHub API
+          // MỤC ĐỘNG TỪ CMS/API
           ...loadDynamicNavbars(),
           
-          // Admin items
+          // Các mục Admin (Đã tách biệt)
           {
-            to: '/admin', 
-            label: '⚙️ Admin',
+            to: '/navbar-manager', 
+            label: '🛠️ Navbar Manager',
+            position: 'right',
+          },
+          {
+            href: '/admin/index.html',
+            label: '⚙️ Decap CMS',
             position: 'right',
           },
           {
@@ -139,41 +137,7 @@ const config = {
       footer: {
         style: 'dark',
         links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
-          },
-          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
-              },
-            ],
-          },
+          // ... (cấu hình footer)
         ],
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
       },
